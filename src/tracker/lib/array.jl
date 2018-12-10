@@ -278,15 +278,79 @@ Base.sum(f::Union{Function,Type},xs::TrackedArray) = sum(f.(xs))
 @grad sum(xs; dims = :) = sum(data(xs), dims = dims),
   Δ -> (zero(xs) .+ Δ, )
 
-Base.prod(xs::TrackedArray, dim) = track(prod, xs, dim)
-Base.prod(xs::TrackedArray) = track(prod, xs)
+Base.prod(xs::TrackedArray; dims=:) = track(prod, xs; dims=dims)
 Base.prod(f::Union{Function, Type}, xs::TrackedArray) = prod(f.(xs))
 
-@grad prod(xs) = prod(data(xs)), Δ -> (prod(xs) ./ xs .* Δ,)
-@grad prod(xs, dim) = prod(data(xs), dims = dim),
-  Δ -> (nobacksies(:sum,
-          reshape(.*(circshift.([reshape(data(xs), length(xs))], 1:length(xs)-1)...), size(xs)) .* Δ),
-        nothing)
+@grad prod(xs; dims=:) = _prod(xs.data, prod(xs.data, dims=dims), dims) # dispatch on dims, not a kw
+_prod(xs::Array, p, ::Colon) = p, Δ -> (nobacksies(:prod, ∇prod(xs, p, data(Δ)) ),)
+_prod(xs::Array, p, d::Int) = p, Δ -> (nobacksies(:prod, ∇prod_d(xs, Val(d), p, data(Δ)) ), )
+_prod(xs::Array, p, dim::NTuple{1}) = _prod(xs, p, first(dim)) # avoiding mapslices
+_prod(xs::Array, p, dims) = p, Δ -> (nobacksies(:prod, mapslices(∇prod, xs; dims=dims) .* Δ), )
+_prod(xs, p, ::Colon) =  p, Δ -> ( ∇prod_all(xs) .* Δ ,) # generic fall-back with circshift
+_prod(xs, p, dim) =      p, Δ -> ( ∇prod_dim(xs, p, dim) .* Δ ,)
+
+function ∇prod(x::AbstractArray, p=prod(x), Δ=1, f=identity) # could also use for prod(f.(xs))
+  !iszero(p) && return p ./ x .* Δ
+  ∇ = fill!(similar(x), 0)
+  z = findall(iszero, x)
+  length(z)>1 && return ∇
+  @inbounds ∇[first(z)] = prod(f(xi) for (i, xi) in pairs(x) if i!=first(z)) * Δ
+  return ∇ 
+end
+
+∇prod_all(x) = reshape( .*(circshift.([reshape(x, length(x))], 1:length(x)-1)...), size(x))
+∇prod_dim(x, p, dim::Int) = .*(circshift.([x], tuple.(Iterators.repeated(0,dim-1)..., 1:size(x,dim)-1))...)
+∇prod_dim(x, p, dim) = p ./ x # error if x contains zero
+
+function ∇prod_d(x::AbstractArray, vald::Val{d}, p=prod(x, dims=d), Δ=fill!(similar(p),1)) where d
+  ∇ = similar(x)
+  for i in Iterators.product(splice_tup(axes(x), vald, 1)...)
+    ic = splice_tup(i, vald, :)
+    @inbounds ∇[ic...] .= ∇prod(x[ic...], p[i...], Δ[i...]) # like mapslices(∇prod, x,p,Δ; dims=d) if that existed
+  end
+  ∇
+end
+
+splice_tup(tup::NTuple{N}, ::Val{d}, el) where {N,d} = ntuple(i -> i==d ? el : tup[i], Val(N))
+
+Base.cumprod(xs::TrackedArray; dims::Union{Nothing, Integer}=nothing) = track(cumprod, xs; dims=dims)
+
+@grad cumprod(xs; dims=nothing) = (ndims(xs)==1 && dims==1) ? _cumprod(xs, nothing) : _cumprod(xs, dims)
+
+_cumprod(xs, ::Nothing) = begin p = cumprod(xs.data); p, Δ -> (nobacksies(:cumprod, ∇cumprod(xs.data, p, data(Δ)) ),) end
+_cumprod(xs, d) = begin p = cumprod(xs.data, dims=d); p, Δ -> (nobacksies(:cumprod, ∇cumprod_d(xs.data, Val(d), p, data(Δ)) ),) end
+
+function ∇cumprod(x::AbstractVector, p=cumprod(x), Δ=fill(1, length(x)))
+  len = length(x)
+  z = something(findfirst(iszero, x), len+1) # would ideally find z on forward pass
+
+  ∇ = fill!(similar(x), 0)
+  @inbounds for i=1:z-1
+    ixi = 1/x[i]
+    for k=i:z-1
+      ∇[i] += p[k] * Δ[k] * ixi
+    end
+  end
+
+  @inbounds if z != len+1
+    pk = z==1 ? one(p[1]) : p[z-1] # will be prod(x[j] for j=1:k if j!=z)
+    ∇[z] += pk * Δ[z]
+    for k=(z+1):len
+      pk *= x[k]
+      ∇[z] += pk * Δ[k]
+    end
+  end
+  ∇
+end
+
+function ∇cumprod_d(x::AbstractArray, vald::Val{d}, p=cumprod(x; dims=d), Δ=fill!(similar(p),1)) where d
+  ∇ = similar(x)
+  for i in Iterators.product(splice_tup(axes(x), vald, 1)...)
+    ic = splice_tup(i, vald, :)
+    @inbounds ∇[ic...] .= ∇cumprod(x[ic...], p[i...], Δ[i...]) # like mapslices(∇cumprod, x,p,Δ; dims=d) if that existed
+  end
+  ∇
+end
 
 Base.findfirst(xs::TrackedArray, args...) = findfirst(xs.data, args...)
 
