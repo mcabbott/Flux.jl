@@ -16,19 +16,21 @@ m(x) == m[2](m[1](x))
 `Chain` also supports indexing and slicing, e.g. `m[2]` or `m[1:end-1]`.
 `m[1:3](x)` will calculate the output of the first three layers.
 """
-type Chain
-  layers::Vector{Any}
-  Chain(xs...) = new([xs...])
+struct Chain{T<:Tuple}
+  layers::T
+  Chain(xs...) = new{typeof(xs)}(xs)
 end
 
-@forward Chain.layers Base.getindex, Base.first, Base.last, Base.endof, Base.push!
-@forward Chain.layers Base.start, Base.next, Base.done
+@forward Chain.layers Base.getindex, Base.first, Base.last, Base.lastindex
+@forward Chain.layers Base.iterate
 
 children(c::Chain) = c.layers
 mapchildren(f, c::Chain) = Chain(f.(c.layers)...)
-adapt(T, c::Chain) = Chain(map(x -> adapt(T, x), c.layers)...)
 
-(c::Chain)(x) = foldl((x, m) -> m(x), x, c.layers)
+applychain(::Tuple{}, x) = x
+applychain(fs::Tuple, x) = applychain(tail(fs), first(fs)(x))
+
+(c::Chain)(x) = applychain(c.layers, x)
 
 Base.getindex(c::Chain, i::AbstractArray) = Chain(c.layers[i]...)
 
@@ -38,10 +40,7 @@ function Base.show(io::IO, c::Chain)
   print(io, ")")
 end
 
-# Seem to need this for `accumulate`; try removing on 0.7
-Base.rcum_promote_type(op, ::Type, ::Type{Any}) = Any
-
-activations(c::Chain, x) = accumulate((x, m) -> m(x), x, c.layers)
+activations(c::Chain, x) = accumulate((x, m) -> m(x), c.layers, init = x)
 
 """
     Dense(in::Integer, out::Integer, σ = identity)
@@ -76,11 +75,11 @@ function Dense(in::Integer, out::Integer, σ = identity;
   return Dense(param(initW(out, in)), param(initb(out)), σ)
 end
 
-treelike(Dense)
+@treelike Dense
 
-function (a::Dense)(x)
+function (a::Dense)(x::AbstractArray)
   W, b, σ = a.W, a.b, a.σ
-  @fix σ.(W*x .+ b)
+  σ.(W*x .+ b)
 end
 
 function Base.show(io::IO, l::Dense)
@@ -107,7 +106,7 @@ end
 Diagonal(in::Integer; initα = ones, initβ = zeros) =
   Diagonal(param(initα(in)), param(initβ(in)))
 
-treelike(Diagonal)
+@treelike Diagonal
 
 function (a::Diagonal)(x)
   α, β = a.α, a.β
@@ -117,3 +116,11 @@ end
 function Base.show(io::IO, l::Diagonal)
   print(io, "Diagonal(", length(l.α), ")")
 end
+
+# Try to avoid hitting generic matmul in some simple cases
+# Base's matmul is so slow that it's worth the extra conversion to hit BLAS
+(a::Dense{<:Any,W})(x::AbstractArray{T}) where {T <: Union{Float32,Float64}, W <: AbstractArray{T}} =
+  invoke(a, Tuple{AbstractArray}, x)
+
+(a::Dense{<:Any,W})(x::AbstractArray{<:Real}) where {T <: Union{Float32,Float64}, W <: AbstractArray{T}} =
+  a(T.(x))
