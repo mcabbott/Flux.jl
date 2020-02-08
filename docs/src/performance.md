@@ -44,6 +44,13 @@ While one could change the activation function (e.g. to use `0.01f0*x`), the idi
     leaky_tanh(x) = oftype(x/1, 0.01)*x + tanh(x)
 ```
 
+There are some warnings about potential type problems, emitted by `@debug` statements. 
+To see these you will usually need to change Julia's logging level, 
+for instance by running this before your model:
+
+```
+    ENV["JULIA_DEBUG"] = "all"
+```
 
 ## Evaluate batches as Matrices of features
 
