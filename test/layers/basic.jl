@@ -116,6 +116,7 @@ import Flux: activations
       @test size(b(x)) == (3,7)
       @test_nowarn gs = gradient(() -> sum(abs2.(b(x))), params(b))
     end
+  end
 
   @testset "output dimensions" begin
     m = Chain(Conv((3, 3), 3 => 16), Conv((3, 3), 16 => 32))
