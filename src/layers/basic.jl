@@ -54,7 +54,7 @@ end
     eltype(y), ". \nThis is may indicate a performance problem with one of the layers.")
   T = typeof(y)
   y, dy -> begin
-    eltype(y) == eltype(dy) || debug_string(
+    eltype(y) == eltype(dy) || warn_string(
       "Chain(...) creates output of eltype ", eltype(y), " but receives gradient of eltype ",
       eltype(dy), ". \nThis is likely to be slow, and the loss function may be the problem.")
     back(dy)
@@ -62,8 +62,9 @@ end
 end
 
 debug_string(arg...) = @debug string(arg...)
+warn_string(arg...) = @warn string(arg...)
 
-Zygote.@nograd debug_string
+Zygote.@nograd debug_string, warn_string
 
 """
     outdims(c::Chain, isize)
@@ -153,7 +154,7 @@ end
   invoke(a, Tuple{AbstractArray}, x)
 
 function (a::Dense{<:Any,W})(x::AbstractArray{<:AbstractFloat}) where {T <: Union{Float32,Float64}, W <: AbstractArray{T}}
-  debug_string("Layer ", a, " has parameters of eltype ", T," but acts on data ", typeof(x),
+  warn_string("Layer ", a, " has parameters of eltype ", T," but acts on data ", typeof(x),
     ", which will be converted to match.")
   a(T.(x))
 end

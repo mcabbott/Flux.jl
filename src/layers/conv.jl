@@ -157,8 +157,11 @@ end
 (a::Conv{<:Any,<:Any,W})(x::AbstractArray{T}) where {T <: Union{Float32,Float64}, W <: AbstractArray{T}} =
   invoke(a, Tuple{AbstractArray}, x)
 
-(a::Conv{<:Any,<:Any,W})(x::AbstractArray{<:Real}) where {T <: Union{Float32,Float64}, W <: AbstractArray{T}} =
+function (a::Conv{<:Any,<:Any,W})(x::AbstractArray{<:Real}) where {T <: Union{Float32,Float64}, W <: AbstractArray{T}}
+  warn_string("Layer ", a, " has parameters of eltype ", T," but acts on data ", typeof(x),
+    ", which will be converted to match.")
   a(T.(x))
+end
 
 """
     outdims(l::Conv, isize::Tuple)

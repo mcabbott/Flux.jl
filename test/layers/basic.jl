@@ -122,7 +122,7 @@ import Flux: activations
   end
 
   @testset "type mismatches" begin
-    using Base.CoreLogging: Debug
+    using Base.CoreLogging: Warn, Debug
 
     m = Chain(Dense(2,2, x->x + 0.1)); x= rand(Float32, 2); y=rand(Float32, 2); # activation creates Float64
     @test_logs min_level=Debug (:debug,
@@ -130,12 +130,12 @@ import Flux: activations
       ) gradient(() -> sum(m(x) .- y), params(m))
 
     m = Chain(Dense(2,2)); x= rand(Float32, 2); y=rand(2); # loss function contains Float64
-    @test_logs min_level=Debug (:debug,
+    @test_logs min_level=Warn (:warn,
       "Chain(...) creates output of eltype Float32 but receives gradient of eltype Float64. \nThis is likely to be slow, and the loss function may be the problem."
       ) gradient(() -> sum(m(x) .- y), params(m))
 
     m = Chain(Dense(2,2)); x= rand(2); y=rand(Float32, 2); # data is Float64
-    @test_logs min_level=Debug (:debug,
+    @test_logs min_level=Debug (:warn,
       "Layer Dense(2, 2) has parameters of eltype Float32 but acts on data Array{Float64,1}, which will be converted to match."
       ) (:debug,
       "Chain(...) receives input of eltype Float64 but creates output of eltype Float32. \nThis is may indicate a performance problem with one of the layers."
