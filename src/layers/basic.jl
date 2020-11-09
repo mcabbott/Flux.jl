@@ -16,7 +16,7 @@ true
 
 julia> m = Chain(Dense(10, 5), Dense(5, 2));
 
-julia> x = rand(10);
+julia> x = rand(Float32, 10);
 
 julia> m(x) == m[2](m[1](x))
 true
