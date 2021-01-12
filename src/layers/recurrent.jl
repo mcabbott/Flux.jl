@@ -75,8 +75,15 @@ struct RNNCell{F,A,V,S}
   state0::S
 end
 
-RNNCell(in::Integer, out::Integer, σ=tanh; init=Flux.glorot_uniform, initb=zeros, init_state=zeros) = 
-  RNNCell(σ, init(out, in), init(out, out), initb(out), init_state(out,1))
+function RNNCell(in::Integer, out::Integer, σ=tanh; init=Flux.glorot_uniform, initb=nothing, init_state=Flux.zeros)
+  b = if initb === nothing
+    Flux.zeros(out)
+  else
+    Base.depwarn("keyword argument initb is deprecated", :RNNCell)
+    initb(out)
+  end
+  RNNCell(σ, init(out, in), init(out, out), b, init_state(out,1))
+end
 
 function (m::RNNCell)(h, x)
   σ, Wi, Wh, b = m.σ, m.Wi, m.Wh, m.b
@@ -121,10 +128,16 @@ struct LSTMCell{A,V,S}
 end
 
 function LSTMCell(in::Integer, out::Integer;
-                  init = glorot_uniform,
-                  initb = zeros,
-                  init_state = zeros)
-  cell = LSTMCell(init(out * 4, in), init(out * 4, out), initb(out * 4), (init_state(out,1), init_state(out,1)))
+                  init = Flux.glorot_uniform,
+                  initb = nothing,
+                  init_state = Flux.zeros)
+  b = if initb === nothing
+    Flux.zeros(out * 4)
+  else
+    Base.depwarn("keyword argument initb is deprecated", :LSTMCell)
+    initb(out * 4)
+  end
+  cell = LSTMCell(init(out * 4, in), init(out * 4, out), b, (init_state(out,1), init_state(out,1)))
   cell.b[gate(out, 2)] .= 1
   return cell
 end
@@ -182,8 +195,15 @@ struct GRUCell{A,V,S}
   state0::S
 end
 
-GRUCell(in, out; init = glorot_uniform, initb = zeros, init_state = zeros) =
-  GRUCell(init(out * 3, in), init(out * 3, out), initb(out * 3), init_state(out,1))
+function GRUCell(in, out; init = glorot_uniform, initb = zeros, init_state = zeros)
+  b = if initb === nothing
+    Flux.zeros(out * 3)
+  else
+    Base.depwarn("keyword argument initb is deprecated", :GRUCell)
+    initb(out * 3)
+  end
+  GRUCell(init(out * 3, in), init(out * 3, out), b, init_state(out,1))
+end
 
 function (m::GRUCell)(h, x)
   b, o = m.b, size(h, 1)
