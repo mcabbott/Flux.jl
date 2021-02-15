@@ -43,25 +43,20 @@ distribution in the interval ``[-x, x]``, where `x = sqrt(6 / (fan_in + fan_out)
 
 This method is described in [1] and also known as Xavier initialization.
 
+See also [`nfan`](@ref Flux.nfan), [`glorot_normal`](@ref Flux.glorot_normal),
+and the [initalisation section](@ref man-init) of the manual.
+
 # Examples
+
 ```jldoctest; setup = :(using Random; Random.seed!(0))
 julia> Flux.glorot_uniform(2, 3)
 2×3 Array{Float32,2}:
  0.601094  -0.57414   -0.814925
  0.900868   0.805994   0.057514
 ```
-
-# See also
-
-* glorot initialization using normal distribution: [`glorot_normal`](@ref Flux.glorot_normal)
-* kaiming initialization using normal distribution: [`kaiming_normal`](@ref Flux.kaiming_normal)
-* kaiming initialization using uniform distribution: [`kaiming_uniform`](@ref Flux.kaiming_uniform)
-* sparse initialization: [`sparse_init`](@ref Flux.sparse_init)
-* calculation of `fan_in` and `fan_out`: [`nfan`](@ref Flux.nfan)
-
 # References
 
-[1] Glorot, Xavier, and Yoshua Bengio. "Understanding the difficulty of training deep feedforward neural networks." _Proceedings of the thirteenth international conference on artificial intelligence and statistics_. 2010.
+[1] Xavier Glorot & Yoshua Bengio. "Understanding the difficulty of training deep feedforward neural networks." _Proc. 13th conf. AI and stat._, 2010. http://proceedings.mlr.press/v9/glorot10a.html
 """
 glorot_uniform(rng::AbstractRNG, dims...) = (rand(rng, Float32, dims...) .- 0.5f0) .* sqrt(24.0f0 / sum(nfan(dims...)))
 glorot_uniform(dims...) = glorot_uniform(Random.GLOBAL_RNG, dims...)
@@ -75,7 +70,11 @@ distribution with mean 0 and standard deviation `sqrt(2 / (fan_in + fan_out))`.
 
 This method is described in [1] and also known as Xavier initialization.
 
+See also [`glorot_uniform`](@ref Flux.glorot_uniform), [`nfan`](@ref Flux.nfan),
+and the [initalisation section](@ref man-init) of the manual.
+
 # Examples
+
 ```jldoctest; setup = :(using Random; Random.seed!(0))
 julia> Flux.glorot_normal(3, 2)
 3×2 Array{Float32,2}:
@@ -84,17 +83,9 @@ julia> Flux.glorot_normal(3, 2)
  -0.223261   0.188052
 ```
 
-# See also
-
-* glorot initialization using uniform distribution: [`glorot_uniform`](@ref Flux.glorot_uniform)
-* kaiming initialization using normal distribution: [`kaiming_normal`](@ref Flux.kaiming_normal)
-* kaiming initialization using uniform distribution: [`kaiming_uniform`](@ref Flux.kaiming_uniform)
-* sparse initialization: [`sparse_init`](@ref Flux.sparse_init)
-* calculation of `fan_in` and `fan_out`: [`nfan`](@ref Flux.nfan)
-
 # References
 
-[1] Glorot, Xavier, and Yoshua Bengio. "Understanding the difficulty of training deep feedforward neural networks." _Proceedings of the thirteenth international conference on artificial intelligence and statistics_. 2010.
+[1] Xavier Glorot & Yoshua Bengio. "Understanding the difficulty of training deep feedforward neural networks." _Proc. 13th conf. AI and stat._, 2010. http://proceedings.mlr.press/v9/glorot10a.html
 """
 glorot_normal(rng::AbstractRNG, dims...) = randn(rng, Float32, dims...) .* sqrt(2.0f0 / sum(nfan(dims...)))
 glorot_normal(dims...) = glorot_normal(Random.GLOBAL_RNG, dims...)
@@ -108,7 +99,11 @@ interval `[-x, x]`, where `x = gain * sqrt(3/fan_in)`.
 
 This method is described in [1] and also known as He initialization.
 
+See also [`kaiming_normal`](@ref Flux.kaiming_normal), [`nfan`](@ref Flux.nfan),
+and the [initalisation section](@ref man-init) of the manual.
+
 # Examples
+
 ```jldoctest; setup = :(using Random; Random.seed!(0))
 julia> Flux.kaiming_uniform(3, 2)
 3×2 Array{Float32,2}:
@@ -117,17 +112,9 @@ julia> Flux.kaiming_uniform(3, 2)
  -0.907795   0.0909376
 ```
 
-# See also
-
-* kaiming initialization using normal distribution: [`kaiming_normal`](@ref Flux.kaiming_normal)
-* glorot initialization using normal distribution: [`glorot_normal`](@ref Flux.glorot_normal)
-* glorot initialization using uniform distribution: [`glorot_uniform`](@ref Flux.glorot_uniform)
-* sparse initialization: [`sparse_init`](@ref Flux.sparse_init)
-* calculation of `fan_in` and `fan_out`: [`nfan`](@ref Flux.nfan)
-
 # References
 
-[1] He, Kaiming, et al. "Delving deep into rectifiers: Surpassing human-level performance on imagenet classification." _Proceedings of the IEEE international conference on computer vision_. 2015.
+[1] Kaiming He et al. "Delving deep into rectifiers: Surpassing human-level performance on ImageNet classification." _Proc. IEEE conf. computer vision_, 2015. https://arxiv.org/abs/1502.01852
 """
 function kaiming_uniform(rng::AbstractRNG, dims...; gain = √2)
   bound = Float32(√3 * gain / sqrt(first(nfan(dims...)))) # fan_in
@@ -145,6 +132,9 @@ distribution with mean 0 and standard deviation `gain * sqrt(fan_in)`.
 
 This method is described in [1] and also known as He initialization.
 
+See also [`glorot_uniform`](@ref Flux.glorot_uniform), [`nfan`](@ref Flux.nfan),
+and the [initalisation section](@ref man-init) of the manual.
+
 # Examples
 ```jldoctest; setup = :(using Random; Random.seed!(0))
 julia> Flux.kaiming_normal(3, 2)
@@ -154,17 +144,9 @@ julia> Flux.kaiming_normal(3, 2)
  -0.353007   0.297336
 ```
 
-# See also
-
-* kaiming initialization using uniform distribution: [`kaiming_uniform`](@ref Flux.kaiming_uniform)
-* glorot initialization using normal distribution: [`glorot_normal`](@ref Flux.glorot_normal)
-* glorot initialization using uniform distribution: [`glorot_uniform`](@ref Flux.glorot_uniform)
-* sparse initialization: [`sparse_init`](@ref Flux.sparse_init)
-* calculation of `fan_in` and `fan_out`: [`nfan`](@ref Flux.nfan)
-
 # References
 
-[1] He, Kaiming, et al. "Delving deep into rectifiers: Surpassing human-level performance on imagenet classification." _Proceedings of the IEEE international conference on computer vision_. 2015.
+[1] Kaiming He et al. "Delving deep into rectifiers: Surpassing human-level performance on ImageNet classification." _Proc. IEEE conf. computer vision_, 2015. https://arxiv.org/abs/1502.01852
 """
 function kaiming_normal(rng::AbstractRNG, dims...; gain = √2f0)
   std = Float32(gain / sqrt(first(nfan(dims...)))) # fan_in
@@ -177,11 +159,14 @@ kaiming_normal(rng::AbstractRNG; init_kwargs...) = (dims...; kwargs...) -> kaimi
 """
     orthogonal([rng=GLOBAL_RNG], dims...; gain = 1)
 
-Return an `Array` of size `dims` which is a (semi) orthogonal matrix, as described in [1]. 
+Return an `Array` of size `dims` which is a (semi) orthogonal matrix, as described in [1].
 
 The input must have at least 2 dimensions.
-For `length(dims) > 2`, a `prod(dims[1:(end - 1)])` by `dims[end]` orthogonal matrix 
+For `length(dims) > 2`, a `prod(dims[1:(end - 1)])` by `dims[end]` orthogonal matrix
 is computed before reshaping it to the original dimensions.
+
+See also [`glorot_uniform`](@ref Flux.glorot_uniform),
+and the [initalisation section](@ref man-init) of the manual.
 
 # Examples
 ```jldoctest; setup = :(using LinearAlgebra)
@@ -207,16 +192,9 @@ julia> transpose(reshape(W3, :, 4)) * reshape(W3, :, 4) ≈ I(4)
 true
 ```
 
-# See also
-* kaiming initialization using normal distribution: [`kaiming_normal`](@ref Flux.kaiming_normal)
-* kaiming initialization using uniform distribution: [`kaiming_uniform`](@ref Flux.kaiming_uniform)
-* glorot initialization using normal distribution: [`glorot_normal`](@ref Flux.glorot_normal)
-* glorot initialization using uniform distribution: [`glorot_uniform`](@ref Flux.glorot_uniform)
-* sparse initialization: [`sparse_init`](@ref Flux.sparse_init)
-
 # References
-[1] Saxe, McClelland, Ganguli. "Exact solutions to the nonlinear dynamics of learning in deep linear neural networks", ICLR 2014, https://arxiv.org/abs/1312.6120
 
+[1] Saxe, McClelland, Ganguli. "Exact solutions to the nonlinear dynamics of learning in deep linear neural networks", ICLR 2014, https://arxiv.org/abs/1312.6120
 """
 function orthogonal(rng::AbstractRNG, rows::Integer, cols::Integer; gain = 1)
   mat = rows > cols ? randn(rng, Float32, rows, cols) : randn(rng, Float32, cols, rows)
@@ -249,6 +227,9 @@ with a mean of zero and standard deviation `std`.
 
 This method is described in [1].
 
+See also [`glorot_uniform`](@ref Flux.glorot_uniform),
+and the [initalisation section](@ref man-init) of the manual.
+
 # Examples
 ```jldoctest; setup = :(using Random; Random.seed!(0))
 julia> Flux.sparse_init(3, 2, sparsity=0.1)
@@ -257,13 +238,6 @@ julia> Flux.sparse_init(3, 2, sparsity=0.1)
  -0.00353007  0.00297336
   0.0         0.00586617
 ```
-
-# See also
-
-* kaiming initialization using normal distribution: [`kaiming_normal`](@ref Flux.kaiming_normal)
-* kaiming initialization using uniform distribution: [`kaiming_uniform`](@ref Flux.kaiming_uniform)
-* glorot initialization using normal distribution: [`glorot_normal`](@ref Flux.glorot_normal)
-* glorot initialization using uniform distribution: [`glorot_uniform`](@ref Flux.glorot_uniform)
 
 # References
 
