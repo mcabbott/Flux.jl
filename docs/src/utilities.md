@@ -18,17 +18,29 @@ Flux.batchseq
 Base.rpad(v::AbstractVector, n::Integer, p)
 ```
 
-## Layer Initialization
+## [Layer Initialisation](@id man-init)
 
-These are primarily useful if you are planning to write your own layers.
-Flux initializes convolutional layers and recurrent cells with `glorot_uniform`
-by default.
-To change the default on an applicable layer, pass the desired function with the
-`init` keyword. For example:
+By default Flux initialises the weights of convolutional layers and recurrent cells with `glorot_uniform`.
+To change this, you can give a function to the `init` keyword. For example:
 
 ```jldoctest; setup = :(using Flux)
 julia> conv = Conv((3, 3), 1 => 8, relu; init=Flux.glorot_normal)
 Conv((3, 3), 1=>8, relu)
+```
+
+For more complicated initialisation, it's recommended to write a function which creates the layer.
+For example, this should match Pytorch's nn.Linear layer defaults:
+
+```jldoctest; setup = :(using Flux)
+julia> function pydense(in, out, σ=identity; bias=true)
+         W = Flux.kaiming_uniform(out, in, gain=sqrt(2/5))
+         fan_in, _ = Flux.nfan(out, in)
+         b = (rand(out) .- 1/2) .* 2 ./ sqrt(fan_in) .|> Float32
+         Dense(W, bias && b, σ)
+       end;
+
+julia> pydense(28^2, 32, tanh, bias=false)
+Dense(784, 32, tanh; bias=false)
 ```
 
 ```@docs
@@ -38,6 +50,7 @@ Flux.kaiming_uniform
 Flux.kaiming_normal
 Flux.orthogonal
 Flux.sparse_init
+Flux.nfan
 ```
 
 ## Model Building
