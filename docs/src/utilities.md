@@ -28,7 +28,7 @@ julia> conv = Conv((3, 3), 1 => 8, relu; init=Flux.glorot_normal)
 Conv((3, 3), 1=>8, relu)
 ```
 
-For more complicated initialisation, it's recommended to write a function which creates the layer.
+To perform more complicated initialisation, it's recommended to write a function which creates the layer.
 For example, this should match Pytorch's nn.Linear layer defaults:
 
 ```jldoctest; setup = :(using Flux)
