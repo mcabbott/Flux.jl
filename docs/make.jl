@@ -27,6 +27,7 @@ makedocs(
          ],
          "Training Models" => [
              "Training" => "training/training.md",
+             "Training API 📚" => "training/train_api.md",
              "Regularisation" => "models/regularisation.md",
              "Loss Functions 📚" => "models/losses.md",
              "Optimisation Rules 📚" => "training/optimisers.md",  # TODO move optimiser intro up to Training
