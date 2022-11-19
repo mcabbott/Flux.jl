@@ -2,7 +2,7 @@
 CurrentModule = Flux
 ```
 
-# Optimisers
+# [Optimisers](@id man-optimisers)
 
 Consider a [simple linear regression](../models/basics.md). We create some dummy data, calculate a loss, and backpropagate to calculate gradients for the parameters `W` and `b`.
 
