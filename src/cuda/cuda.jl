@@ -2,7 +2,7 @@ module CUDAint
 
 using ..CUDA
 
-import ..Flux: Flux
+import ..Flux: Flux, Chain
 using ChainRulesCore
 import NNlib, NNlibCUDA
 
