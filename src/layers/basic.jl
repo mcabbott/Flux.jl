@@ -36,7 +36,7 @@ struct Chain{T<:Union{Tuple, NamedTuple, AbstractVector}}
   layers::T
 end
 
-Chain(xs...) = Chain(xs)
+Chain(xs...) = Chain(_chainflat(xs...))
 function Chain(; kw...)
   :layers in keys(kw) && throw(ArgumentError("a Chain cannot have a named layer called `layers`"))
   isempty(kw) && return Chain(())
@@ -47,6 +47,28 @@ end
   Base.iterate, Base.lastindex, Base.keys, Base.firstindex
 
 @functor Chain
+
+# This looks for sub-chains to flatten, to help the chain rrule see more pieces.
+# Applies only to Chain(layers...) constructor, not the one functor uses.
+function _chainflat(xs...)
+  i = findfirst(x -> x isa Chain, xs)
+  if !isnothing(i)
+    return _chainflat(xs[1:i-1]..., xs[i].layers..., xs[i+1:end]...)
+  end
+  # This is rather specific, aims to fix up Metalhead's Resnet...
+  j = findfirst(x -> x in (relu, sigmoid), xs)
+  if !isnothing(j) && j > 1 && xs[j-1] isa BatchNorm{typeof(identity)}
+    nt, re = functor(xs[j-1])
+    bat = re(merge(nt, (λ = xs[j],)))
+    return _chainflat(xs[1:j-2]..., bat, xs[j+1:end]...)
+  end
+  # This still allows Dense(sin, tanh), no arrays, just composition.
+  # It also forbids Chain(Dense(2=>1), only, tanh) which does work.
+  if any(==(tanh), xs) && any(x -> x isa Dense, xs)
+    throw(ArgumentError("cannot use tanh on arrays in a Chain, it must be broadcasted"))
+  end
+  return xs
+end
 
 (c::Chain)(x) = _applychain(c.layers, x)
 
