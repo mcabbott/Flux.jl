@@ -6,7 +6,7 @@ using Functors: fmap, fmapstructure
 using ..Flux: Flux # used only in docstring 
 import ..Flux.Optimise: train!, update!  # during 0.13, we add methods to the old functions
 
-export setup, train!
+export setup, train!, batchmean
 
 using ProgressLogging: @progress, @withprogress, @logprogress
 using Zygote: Zygote, Params
@@ -128,6 +128,53 @@ function _rule_to_state(model, rule::Optimisers.AbstractRule)
     leaf
   end
   state
+end
+
+"""
+    batchmean(f, data)
+
+This is roughly `mean(f(d...) for d in data)`,
+but each entry is weighted by the size of the batch,
+and `f` may return several items.
+
+If one epoch of training looks like this, where each `d in data` is a Tuple:
+```
+Flux.train!(model, data, opt_state) do m, x, y
+    Flux.crossentropy(m(x), y)
+end
+```
+then this will compute the accuracy:
+```
+acc = Flux.batchmean(data) do x, y
+    mean(Flux.onecold(model(x)) .== Flux.onecold(y))
+end
+```
+And this will compute the mean loss & accuracy in one pass:
+```
+loss, acc = Flux.batchmean(data) do x, y
+    yhat = model(x)
+    Flux.crossentropy(yhat, y), mean(onecold(yhat) .== onecold(y))
+end
+```
+
+If `first(data)` is not a Tuple, then this is more like `mean(f(d) for d in data)`.
+That is, like [`train!`](@ref), it does not splat other types.
+"""
+function batchmean(f, data)
+    it = iterate(data)
+    isnothing(it) && error("batchmean can't work with empty data!")
+    d, s = it
+    tot = d isa Tuple ? f(d...) : f(d)
+    cnt = numobs(d)
+    it = iterate(data, s)
+    while it !== nothing
+        d, s = it
+        val = d isa Tuple ? f(d...) : f(d)
+        tot = tot .+ val
+        cnt += numobs(d)
+        it = iterate(data, s)
+    end
+    tot ./ cnt
 end
 
 end # module Train
