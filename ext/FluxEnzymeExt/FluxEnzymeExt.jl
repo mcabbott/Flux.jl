@@ -104,10 +104,10 @@ _get_loss(y) = error("""`Flux.withgradient(f, xs...)` expects that `y = f(xs...)
 
 _applyloss(loss, model, d...) = loss(model, d...)
 
-function _enzyme_train!(loss, model::Duplicated, data, opt; cb = nothing)
+function _enzyme_train!(loss, model::Duplicated, data, opt; cb = nothing, epochs::Int = 1)
   isnothing(cb) || error("""train! does not support callback functions.
                             For more control use a loop with `gradient` and `update!`.""")
-  @withprogress for (i,d) in enumerate(data)
+  @withprogress for (i,d) in enumerate(Iterators.cycle(data, epochs))
     d_splat = d isa Tuple ? d : (d,)
 
     _make_zero!(model.dval)
@@ -120,7 +120,7 @@ function _enzyme_train!(loss, model::Duplicated, data, opt; cb = nothing)
     opt, model2 = Optimisers.update!(opt, model.val, model.dval)
     model = Duplicated(model2, model.dval)
 
-    @logprogress Base.haslength(data) ? i/length(data) : nothing
+    @logprogress Base.haslength(data) ? i/(length(data)*epochs) : nothing
   end
 end
 

@@ -87,6 +87,22 @@ for (trainfn!, name) in ((Flux.train!, "Zygote"), (train_enzyme!, "Enzyme"))
       @test_throws ErrorException trainfn!((args...,) -> 1, m1, [(1,2)], Descent(0.1); cb)
     end
   end
+
+  @testset "keyword epochs, with $name" begin
+    # Solve a simple model which needs > 1 epochs to work
+    X = repeat(hcat(digits.(0:3, base=2, pad=2)...), 1, 32)
+    Y = Flux.onehotbatch(xor.(eachrow(X)...), 0:1)
+    data = Flux.DataLoader((X, Y); batchsize=16, shuffle=true)
+
+    model = Chain(Dense(2 => 3, sigmoid), BatchNorm(3), Dense(3 => 2))
+    state = Flux.setup(Adam(0.1, (0.7, 0.95)), model)
+
+    trainfn!(model, data, state, epochs=100) do m, x, y
+        Flux.logitcrossentropy(m(x), y)
+    end
+
+    @test all((softmax(model(X)) .> 0.5) .== Y)
+  end
 end
 
 @testset "Flux.update! features" begin

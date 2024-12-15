@@ -2,6 +2,9 @@
 
 See also [github's page](https://github.com/FluxML/Flux.jl/releases) for a complete list of PRs merged before each release.
 
+## v0.16.1
+* `train!` now takes a keyword `epochs`.
+
 ## v0.16.0 (15 December 2025)
 This release has a single **breaking change**:
 

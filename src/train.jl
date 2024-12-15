@@ -63,14 +63,15 @@ Special method for use with Enzyme.jl, ignores the stored gradient.
 setup(rule::Optimisers.AbstractRule, model::Duplicated) = setup(rule, model.val)
 
 """
-    train!(loss, model, data, opt_state)
+    train!(loss, model, data, opt_state; epochs=1)
 
 Uses a `loss` function and training `data` to improve the `model`'s parameters
 according to a particular optimisation rule encoded in `opt_state`.
 Iterates through `data` once, evaluating for each `d in data` either
 `loss(model, d...)` if `d isa Tuple`, or else `loss(model, d)` for other `d`.
+With keyword `epochs=N`, it will iterate through `data` N times.
 
-If `model` is an Enzyme.Duplicated and `Enzyme.jl` is loaded, gradients will be computed with Enzyme,
+If `model isa Enzyme.Duplicated` and Enzyme.jl is loaded, gradients will be computed with Enzyme,
 otherwise they will be computed with Zygote.
 
 For example, with these definitions...
@@ -83,9 +84,11 @@ opt_state = Flux.setup(Adam(), model)   # explicit setup of optimiser momenta
 ```
 ...calling `Flux.train!(loss3, model, data, opt_state)` runs a loop much like this:
 ```
-for d in data
+for e in 1:epochs
+  for d in data
     ∂L∂m = gradient(loss3, model, d...)[1]
     update!(opt_state, model, ∂L∂m)
+  end
 end
 ```
 You can also write this loop yourself, if you need more flexibility.
@@ -108,10 +111,10 @@ It adds only a few features to the loop above:
     * Callback functions are not supported.
       (But any code can be included in the above `for` loop.)
 """
-function train!(loss, model, data, opt; cb = nothing)
+function train!(loss, model, data, opt; cb = nothing, epochs::Int = 1)
   isnothing(cb) || error("""train! does not support callback functions.
                             For more control use a loop with `gradient` and `update!`.""")
-  @withprogress for (i,d) in enumerate(data)
+  @withprogress for (i,d) in enumerate(Iterators.cycle(data, epochs))
     d_splat = d isa Tuple ? d : (d,)
 
     l, gs = Zygote.withgradient(m -> loss(m, d_splat...), model)
@@ -122,14 +125,14 @@ function train!(loss, model, data, opt; cb = nothing)
 
     opt, model = Optimisers.update!(opt, model, gs[1])
 
-    @logprogress Base.haslength(data) ? i/length(data) : nothing
+    @logprogress Base.haslength(data) ? i/(length(data)*epochs) : nothing
   end
 end
 
 
 # This method let you use Optimisers.Descent() without setup, when there is no state
-function train!(loss, model, data, rule::Optimisers.AbstractRule; cb = nothing)
-  train!(loss, model, data, _rule_to_state(model, rule); cb)
+function train!(loss, model, data, rule::Optimisers.AbstractRule; cb = nothing, epochs::Int = 1)
+  train!(loss, model, data, _rule_to_state(model, rule); cb, epochs)
 end
 
 function _rule_to_state(model, rule::Optimisers.AbstractRule)
@@ -145,25 +148,21 @@ function _rule_to_state(model, rule::Optimisers.AbstractRule)
 end
 
 """
-    train!(loss, Duplicated(model), data, opt_state)
+    train!(loss, Duplicated(model), data, opt_state; epochs=1)
 
 This method uses Enzyme.jl instead of Zygote.jl to compute the gradients,
 but is otherwise the same as `train!(loss, model, data, opt_state)`.
 
 Only available when Enzyme is loaded.
-
-!!! compat "New"
-    This method was added in Flux 0.13.9.
-
 """
-train!(loss, model::Duplicated, data, opt; cb = nothing) = _enzyme_train!(loss, model, data, opt; cb = nothing)
+train!(loss, model::Duplicated, data, opt; cb = nothing, epochs::Int = 1) = _enzyme_train!(loss, model, data, opt; cb, epochs)
 
 # FluxEnzymeExt defines more specific _enzyme_train!(loss, model::Duplicated, data, opt; cb)
-_enzyme_train!(loss, model, data, opt; cb = nothing) = throw(ArgumentError("The method `train!(loss, Duplicated(model), data, opt_state)` is only available when Enzyme.jl is loaded"))
+_enzyme_train!(loss, model, data, opt; kw...) = throw(ArgumentError("The method `train!(loss, Duplicated(model), data, opt_state)` is only available when Enzyme.jl is loaded"))
 
 # This method let you use Optimisers.Descent() without setup, when there is no state
-function train!(loss, model::Duplicated, data, rule::Optimisers.AbstractRule; cb=nothing)
-  train!(loss, model, data, _rule_to_state(model, rule); cb)
+function train!(loss, model::Duplicated, data, rule::Optimisers.AbstractRule; cb=nothing, epochs::Int = 1)
+  train!(loss, model, data, _rule_to_state(model, rule); cb, epochs)
 end
 
 end # module Train
