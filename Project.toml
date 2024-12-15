@@ -1,6 +1,6 @@
 name = "Flux"
 uuid = "587475ba-b771-5e3f-ad9e-33799f191a9c"
-version = "0.16.0"
+version = "0.16.1"
 
 [deps]
 Adapt = "79e6a3ab-5dfb-504d-930d-738a2a938a0e"
@@ -47,7 +47,7 @@ Adapt = "4"
 CUDA = "5"
 ChainRulesCore = "1.12"
 Compat = "4.10.0"
-Enzyme = "0.13"
+Enzyme = "0.13.22"
 EnzymeCore = "0.7.7, 0.8.4"
 Functors = "0.5"
 MLDataDevices = "1.4.2"

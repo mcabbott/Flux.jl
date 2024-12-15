@@ -11,8 +11,7 @@ function train_enzyme!(fn, model, args...; kwargs...)
 end
 
 for (trainfn!, name) in ((Flux.train!, "Zygote"), (train_enzyme!, "Enzyme"))
-
-  if (name == "Enzyme" && get(ENV, "FLUX_TEST_ENZYME", "true") == "false")
+  if name == "Enzyme" && get(ENV, "FLUX_TEST_ENZYME", "true") == "false"
     continue
   end
 
@@ -48,11 +47,9 @@ for (trainfn!, name) in ((Flux.train!, "Zygote"), (train_enzyme!, "Enzyme"))
 end
 
 for (trainfn!, name) in ((Flux.train!, "Zygote"), (train_enzyme!, "Enzyme"))
-  # TODO reinstate Enzyme
-  name == "Enzyme" && continue  
-  # if (name == "Enzyme" && get(ENV, "FLUX_TEST_ENZYME", "true") == "false")
-  #   continue
-  # end
+  if name == "Enzyme" && get(ENV, "FLUX_TEST_ENZYME", "true") == "false"
+    continue
+  end
 
   @testset "Flux.train! features with $name" begin
     @testset "Stop on NaN" begin
@@ -64,11 +61,7 @@ for (trainfn!, name) in ((Flux.train!, "Zygote"), (train_enzyme!, "Enzyme"))
         (i == 51 ? NaN32 : 1f0) * sum(m([1.0]))
       end
       @test CNT[] == 51  # stopped early
-      if name != "Enzyme"
-        @test m1.weight[1] ≈ -5  # did not corrupt weights
-      else
-        @test m1.weight[1] ≈ 0.0  # did not corrupt weights
-      end
+      @test m1.weight[1] ≈ -5  # did not corrupt weights
     end
 
     @testset "non-tuple data" begin
@@ -132,13 +125,10 @@ end
 end
 
 for (trainfn!, name) in ((Flux.train!, "Zygote"), (train_enzyme!, "Enzyme"))
+  if name == "Enzyme" && get(ENV, "FLUX_TEST_ENZYME", "true") == "false"
+    continue
+  end
 
-  # TODO reinstate Enzyme
-  name == "Enzyme" && continue
-  # if (name == "Enzyme" && get(ENV, "FLUX_TEST_ENZYME", "true") == "false")
-  #   continue
-  # end
-  
   @testset "L2 regularisation with $name" begin
     # New docs claim an exact equivalent. It's a bit long to put the example in there,
     # but perhaps the tests should contain it.
@@ -156,7 +146,7 @@ for (trainfn!, name) in ((Flux.train!, "Zygote"), (train_enzyme!, "Enzyme"))
     end
     diff1 = model.weight .- init_weight
 
-    # Take 2: the same, but with Optimisers.trainables. 
+    # Take 2: the same, but with Optimisers.trainables.
     model.weight .= init_weight
     model.bias .= 0
     pen2(x::AbstractArray) = sum(abs2, x)/2
@@ -186,7 +176,7 @@ end
 @testset "Flux.setup bugs" begin
   # https://github.com/FluxML/Flux.jl/issues/2144
   @test Flux.setup(Flux.Adam(), Embedding(3 => 1)).weight isa Optimisers.Leaf
-  
+
   @test Flux.setup(Flux.ClipGrad(1), Dense(2 => 3)).weight.rule isa Optimisers.ClipGrad
   @test Flux.setup(Flux.ClipNorm(1), Dense(2 => 3)).weight.rule isa Optimisers.ClipNorm
 end
